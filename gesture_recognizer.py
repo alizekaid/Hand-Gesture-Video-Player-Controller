@@ -78,6 +78,23 @@ class GestureRecognizer:
             metadata['pinch_distance'] = length
             metadata['pinch_coords'] = ((x1+x2)//2, (y1+y2)//2)
 
+        # Mode: Seek Control (Index and Middle merged)
+        # Fingers: Index(1) and Middle(1) UP. Ring(0) and Pinky(0) DOWN.
+        elif fingers[1] == 1 and fingers[2] == 1 and fingers[3] == 0 and fingers[4] == 0:
+             # Check if they are merged (distance between tip 8 and 12)
+             x1, y1 = lm_list[8][1], lm_list[8][2]
+             x2, y2 = lm_list[12][1], lm_list[12][2]
+             dist = math.hypot(x2 - x1, y2 - y1)
+             
+             # Merged Threshold (pixels)
+             # Relaxed from 40 to 60 to allow for easier activation
+             if dist < 60: 
+                 gesture = "SEEK_MODE"
+                 # Pass Index Tip for movement tracking
+                 metadata['seek_coords'] = (x1, y1)
+             else:
+                 gesture = "OPEN_PALM" # Fallback if separated, or could be "PEACE"
+
         elif total_fingers == 5:
             gesture = "OPEN_PALM"
         elif total_fingers == 0:

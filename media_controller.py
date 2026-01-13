@@ -61,3 +61,27 @@ class MediaController:
         we might stick to relative up/down for this prototype.
         """
         pass
+
+    def seek_forward(self):
+        """Seeks forward 10 seconds."""
+        if time.time() - self.last_action_time > self.debounce_delay:
+            print(f"Action: Seek Forward (Mode: {self.control_mode})")
+            if self.control_mode == 'youtube':
+                pyautogui.press('l') # +10s
+            else:
+                pyautogui.press('right') # Usually +5s or +10s depending on app
+            self.last_action_time = time.time()
+            return True
+        return False
+
+    def seek_backward(self):
+        """Seeks backward 10 seconds."""
+        if time.time() - self.last_action_time > self.debounce_delay:
+            print(f"Action: Seek Backward (Mode: {self.control_mode})")
+            if self.control_mode == 'youtube':
+                pyautogui.press('j') # -10s
+            else:
+                pyautogui.press('left') # Usually -5s or -10s depending on app
+            self.last_action_time = time.time()
+            return True
+        return False

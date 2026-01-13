@@ -1,0 +1,147 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{geometry}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{color}
+
+% Page Setup
+\geometry{
+ a4paper,
+ total={170mm,257mm},
+ left=20mm,
+ top=20mm,
+}
+
+% Header and Footer
+\pagestyle{fancy}
+\fancyhf{}
+\rhead{HCI Final Project Report}
+\lhead{Touchless Gesture Control}
+\cfoot{\thepage}
+
+% Title Info
+\title{\textbf{Touchless Gesture Control Interface for Media Playback}}
+\author{Ali Zekai Deveci \\ Student Number: 60291}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction}
+This report documents the design and implementation of a \textbf{Touchless Gesture Control Interface} that allows users to control media playback using hand gestures captured by a webcam. The system replaces traditional input devices with computer vision-based interaction, focusing on accessibility, ergonomics, and intuitive mapping.
+
+\section{Updated Project Assumptions}
+The initial proposal has been realized with the following refinements:
+\begin{itemize}
+    \item \textbf{Gestures Implemented:}
+    \begin{itemize}
+        \item \textit{Open Palm}: Play/Pause (Toggle).
+        \item \textit{Closed Fist}: Pause (Toggle) / Neutral state.
+        \item \textit{Volume Mode} (Thumb+Index Open): Move Up/Down to adjust volume.
+        \item \textit{Mute} (Thumb+Index Pinch): Toggle system mute.
+        \item \textit{Seek Mode} (Index+Middle Merged): Wave Left/Right to seek -10s/+10s.
+    \end{itemize}
+    \item \textbf{Target Application:} The system was tested primarily on \textbf{YouTube} (browser), using keyboard shortcut simulation (Space, k, m, Arrows, j, l). However, it is designed to be generally applicable to any media player that supports standard hotkeys.
+    \item \textbf{Robustness:} Added ``cooldown'' logic and merged finger thresholds to prevent accidental triggers (e.g., when exiting volume mode).
+\end{itemize}
+
+\newpage
+\section{System Architecture / Processing Pipeline}
+The system follows a continuous processing pipeline:
+\begin{enumerate}
+    \item \textbf{Input Capture:} Webcam captures frames at 30+ FPS.
+    \item \textbf{Preprocessing:} Frames are flipped (mirrored) for intuitive interaction and converted to RGB.
+    \item \textbf{Hand Tracking:} \texttt{MediaPipe Hands} processes the frame to extract 21 3D landmarks ($x, y, z$).
+    \item \textbf{Gesture Recognition:} The \texttt{GestureRecognizer} module analyzes landmark geometry (finger states, distances) to classify the current pose.
+    \item \textbf{State Machine \& Logic:} The main loop tracks gesture history and ``patience'' counters to handle state transitions and debouncing.
+    \item \textbf{Action Execution:} If a valid gesture transition is detected, \texttt{MediaController} triggers the OS-level input via \texttt{pyautogui}.
+    \item \textbf{Feedback:} Visual overlays (text, skeletons, mode indicators) are drawn on the frame and displayed to the user.
+\end{enumerate}
+
+\section{Main Algorithms and Technical Approach}
+
+\subsection{Hand Tracking}
+The project utilizes Google's MediaPipe for robust hand tracking. It provides landmark coordinates normalized to [0,1].
+\begin{verbatim}
+img = tracker.find_hands(img)
+lm_list, handedness = tracker.get_landmark_positions(img)
+\end{verbatim}
+
+\subsection{Gesture Classification}
+Gestures are defined by geometric heuristics:
+\begin{itemize}
+    \item \textbf{Volume Mode:} Thumb and Index fingers are UP, others DOWN.
+    \item \textbf{Seek Mode:} Index and Middle fingers are UP and MERGED (distance $< 60$px).
+    \item \textbf{Mute:} In Volume Mode, if distance between Thumb tip and Index tip $< 30$px.
+\end{itemize}
+
+\subsection{Smooth Interaction Logic}
+To prevent jitter and accidental triggers:
+\begin{itemize}
+    \item \textbf{Debouncing:} Actions like Play/Pause only trigger on the ``Rising Edge'' (transition from Non-Palm to Palm).
+    \item \textbf{Cooldown:} A cooldown timer (5 frames) blocks new gestures immediately after complex modes (Seek/Volume) to prevent ``Open Palm'' misfires during hand opening.
+    \item \textbf{Anchoring:} For continuous controls (Volume/Seek), movement is calculated relative to an initial ``anchor'' position ($prev\_vol\_y$), which updates dynamically.
+\end{itemize}
+
+\section{User Interface Design}
+The GUI is a real-time video feed with augmented reality elements:
+\begin{itemize}
+    \item \textbf{Skeleton Overlay:} Shows tracking status.
+    \item \textbf{Mode Text:} Displays current detected gesture (e.g., "Mode: SEEK\_MODE").
+    \item \textbf{Feedback Icons:} Visual circles follow the controlling fingers (Cyan for Seek, Magenta for Volume).
+    \item \textbf{Action Logs:} Text hints like "VOL UP" or "SEEK +10s" appear near the hand when an action triggers.
+\end{itemize}
+
+\section{Tools and Technology Stack}
+The project was implemented using the following technology stack:
+\begin{itemize}
+    \item \textbf{Programming Language:} Python 3.11
+    \item \textbf{Environment Management:} Python \texttt{venv} (Virtual Environment)
+    \item \textbf{Core Libraries:}
+    \begin{itemize}
+        \item \textbf{OpenCV (opencv-python):} For real-time computer vision and image processing.
+        \item \textbf{MediaPipe:} For efficient, on-device hand tracking and landmark extraction.
+        \item \textbf{PyAutoGUI:} For programmatic control of the mouse and keyboard to simulate user input.
+        \item \textbf{NumPy:} For efficient numerical operations and geometry calculations.
+    \end{itemize}
+    \item \textbf{Hardware:} Standard RGB Webcam (built-in or USB).
+\end{itemize}
+
+\section{Execution Instructions}
+\subsection{Environment Setup}
+The project relies on a specific Python environment to ensure compatibility.
+\begin{verbatim}
+# 1. Create a virtual environment (Python 3.11 recommended)
+python3.11 -m venv venv
+
+# 2. Activate the virtual environment
+# On macOS/Linux:
+source venv/bin/activate
+# On Windows:
+# venv\Scripts\activate
+
+# 3. Install dependencies
+pip install -r requirements.txt
+\end{verbatim}
+
+\subsection{Running the System}
+Once the environment is active and dependencies are installed:
+\begin{verbatim}
+python3 main.py
+\end{verbatim}
+\begin{itemize}
+    \item Ensure the camera has permission to access the video feed.
+    \item For **YouTube control**, click on the video window once to ensure it has focus before using gestures.
+    \item Press 'q' to exit the application.
+\end{itemize}
+
+\section{Example Results & Conclusion}
+The system successfully controls YouTube playback with low latency. The "Seek Mode" allows for precise video navigation, while the "Volume Mode" provides granular audio control. The addition of robustness features (cooldowns, patience) significantly improved the usability by reducing false positives during natural hand movements.
+
+\end{document}
+ 

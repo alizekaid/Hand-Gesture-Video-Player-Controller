@@ -31,8 +31,18 @@ def main():
     volPer = 0
     prev_vol_y = None # Track previous Y position for volume control
     pinch_active = False # Track pinch state for mute
+    prev_seek_x = None # Track previous X position for seek control
     
     last_gesture = "None" # Track previous gesture to prevent bouncing
+    
+    # Patience variables
+    seek_patience = 0
+    max_seek_patience = 5  # Number of frames to hold state if gesture is lost
+    
+    # Cooldown to prevet accidental triggers after special modes
+    gesture_lock_cooldown = 0
+    LOCK_FRAMES = 5
+
 
     print("Starting Gesture Control Interface... Press 'q' to exit.")
     print("NOTE: For YouTube control, click on the video window first to ensure it's focused.")
@@ -57,10 +67,17 @@ def main():
             # 2. Recognize Gesture
             gesture, fingers, meta = recognizer.recognize_gesture(lm_list, handedness)
             
+            # --- Cooldown Logic ---
+            if gesture == "VOLUME_MODE" or gesture == "SEEK_MODE":
+                gesture_lock_cooldown = LOCK_FRAMES
+            elif gesture_lock_cooldown > 0:
+                gesture_lock_cooldown -= 1
+            
             # 3. Action based on Gesture
             if gesture == "OPEN_PALM":
                 # Only trigger if the previous gesture was NOT Open Palm (Rising Edge)
-                if last_gesture != "OPEN_PALM":
+                # AND check cooldown (prevents triggers after Volume/Seek modes even if there are gap frames)
+                if last_gesture != "OPEN_PALM" and gesture_lock_cooldown == 0:
                     print(f"Gesture Detected: {gesture}") # Debug Log
                     controller.play_pause()
                 
@@ -116,10 +133,48 @@ def main():
                         controller.set_volume('down')
                         cv2.putText(img, "VOL DOWN", (cx, cy + 40), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
                         prev_vol_y = cy
+
+            elif gesture == "SEEK_MODE":
+                seek_patience = max_seek_patience # Reset patience
+                sx, sy = meta.get('seek_coords', (0,0))
                 
+                # Visual Feedback
+                color = (255, 255, 0) # Cyan
+                cv2.circle(img, (sx, sy), 15, color, cv2.FILLED)
+                
+                # Initialize anchor if needed
+                if prev_seek_x is None:
+                    prev_seek_x = sx
+                
+                seek_threshold = 30 # px movement to trigger
+                
+                if handedness == "Right":
+                    cv2.putText(img, "Right Hand: Wave Right >>", (50, 450), cv2.FONT_HERSHEY_PLAIN, 1.5, color, 2)
+                    # Wave Right -> X Increases
+                    if sx > prev_seek_x + seek_threshold:
+                        if controller.seek_forward():
+                            cv2.putText(img, "SEEK +10s", (sx, sy - 40), cv2.FONT_HERSHEY_PLAIN, 2, color, 2)
+                            prev_seek_x = sx
+
+                elif handedness == "Left":
+                    cv2.putText(img, "<< Left Hand: Wave Left", (50, 450), cv2.FONT_HERSHEY_PLAIN, 1.5, color, 2)
+                    # Wave Left -> X Decreases
+                    if sx < prev_seek_x - seek_threshold:
+                        if controller.seek_backward():
+                            cv2.putText(img, "SEEK -10s", (sx, sy - 40), cv2.FONT_HERSHEY_PLAIN, 2, color, 2)
+                            prev_seek_x = sx
+            
         # Reset volume anchor if not in volume mode
         if gesture != "VOLUME_MODE":
             prev_vol_y = None
+        
+        # Smart Reset for Seek Mode (with patience)
+        if gesture != "SEEK_MODE":
+            if seek_patience > 0:
+                seek_patience -= 1
+                # Keep prev_seek_x (do nothing)
+            else:
+                prev_seek_x = None
 
         # 4. Display Info
         cTime = time.time()
