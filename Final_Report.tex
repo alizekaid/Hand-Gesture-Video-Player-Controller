@@ -63,6 +63,13 @@ The system follows a continuous processing pipeline:
     \item \textbf{Feedback:} Visual overlays (text, skeletons, mode indicators) are drawn on the frame and displayed to the user.
 \end{enumerate}
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{open_palm.png}
+    \caption{System overview showing the MediaPipe hand skeleton and UI overlays during an Open Palm gesture.}
+    \label{fig:skeleton}
+\end{figure}
+
 \section{Main Algorithms and Technical Approach}
 
 \subsection{Hand Tracking}
@@ -80,6 +87,13 @@ Gestures are defined by geometric heuristics:
     \item \textbf{Mute:} In Volume Mode, if distance between Thumb tip and Index tip $< 30$px.
 \end{itemize}
 
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.6\textwidth]{mute.png}
+    \caption{The "Pinch" gesture used to trigger a Mute toggle.}
+    \label{fig:mute}
+\end{figure}
+
 \subsection{Smooth Interaction Logic}
 To prevent jitter and accidental triggers:
 \begin{itemize}
@@ -96,6 +110,13 @@ The GUI is a real-time video feed with augmented reality elements:
     \item \textbf{Feedback Icons:} Visual circles follow the controlling fingers (Cyan for Seek, Magenta for Volume).
     \item \textbf{Action Logs:} Text hints like "VOL UP" or "SEEK +10s" appear near the hand when an action triggers.
 \end{itemize}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.7\textwidth]{volume_up.png}
+    \caption{Volume Mode UI: Magenta indicators follow the hand for movement tracking during a Volume Up action.}
+    \label{fig:vol_ui}
+\end{figure}
 
 \section{Tools and Technology Stack}
 The project was implemented using the following technology stack:
@@ -142,6 +163,27 @@ python3 main.py
 
 \section{Example Results & Conclusion}
 The system successfully controls YouTube playback with low latency. The "Seek Mode" allows for precise video navigation, while the "Volume Mode" provides granular audio control. The addition of robustness features (cooldowns, patience) significantly improved the usability by reducing false positives during natural hand movements.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{seek-10.png}
+        \caption{Seek Backward gesture.}
+    \end{minipage}\hfill
+    \begin{minipage}{0.48\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{seek+10.png}
+        \caption{Seek Forward gesture.}
+    \end{minipage}
+    \label{fig:gestures}
+\end{figure}
+
+\section{Project Repository}
+The complete source code and documentation for this project are available on GitHub:
+\begin{center}
+    \url{https://github.com/alizekaid/Hand-Gesture-Video-Player-Controller}
+\end{center}
 
 \end{document}
  

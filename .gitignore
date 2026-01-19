@@ -1,0 +1,16 @@
+# Binaries and Archives
+*.zip
+*.mov
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# OS
+.DS_Store
+
+# Virtual Environment
+venv/
+env/
+.env
